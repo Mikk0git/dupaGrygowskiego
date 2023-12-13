@@ -1,0 +1,6 @@
+venv
+dist
+build
+dupa.spec
+tmp
+.env
